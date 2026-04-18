@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import './App.css'
 
 function App() {
@@ -92,13 +93,26 @@ function App() {
           <p>AI Confidence: <strong>{(result.probability * 100).toFixed(1)}% chance of lateness</strong></p>
           
           <h3>Top Delay Factors (SHAP Analysis):</h3>
-          <ul>
-            {result.top_reasons.map((reason, index) => (
-              <li key={index}>
-                {reason.feature} (Impact: {reason.impact > 0 ? "+" : ""}{reason.impact.toFixed(3)})
-              </li>
-            ))}
-          </ul>
+          
+          {/* NEW RECHARTS VISUALIZATION */}
+          <div style={{ height: '250px', width: '100%', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: '8px', padding: '15px 0', marginTop: '10px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart layout="vertical" data={result.top_reasons} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.8)' }} />
+                <YAxis dataKey="feature" type="category" width={140} tick={{ fill: 'rgba(255,255,255,0.9)', fontSize: 13 }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#222', border: 'none', borderRadius: '8px', color: '#fff' }}
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                />
+                <Bar dataKey="impact" radius={[0, 4, 4, 0]}>
+                  {/* Red bars for delay factors (+), Green bars for speeding factors (-) */}
+                  {result.top_reasons.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.impact > 0 ? '#ff4d4f' : '#4ade80'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
           {/* NEW LLM INSIGHT SECTION */}
           <div className="llm-insight">
