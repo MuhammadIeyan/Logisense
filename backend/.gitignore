@@ -1,7 +1,6 @@
 # Python ignores
 venv/
 __pycache__/
-*.joblib
 
 # React ignores
 frontend/node_modules/
