@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pandas
+xgboost
+scikit-learn
+joblib
+shap
+google-generativeai
+pydantic
