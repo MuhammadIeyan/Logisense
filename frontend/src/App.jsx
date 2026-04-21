@@ -14,6 +14,8 @@ function App() {
   // 2. State to hold the AI's response
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [batchResult, setBatchResult] = useState(null)
+  const [batchLoading, setBatchLoading] = useState(false)
 
   // 3. Handle typing in the form
   const handleChange = (e) => {
@@ -50,78 +52,109 @@ function App() {
     }
   }
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setBatchLoading(true)
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const response = await fetch('https://logisense.onrender.com/predict_batch', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await response.json()
+      setBatchResult(data)
+    } catch (error) {
+      alert("Error processing batch file.")
+    } finally {
+      setBatchLoading(false)
+    }
+  }
+
   return (
     <div className="container">
-      <h1>📦 LogiSense AI Dashboard</h1>
-      <p>Enter shipment details to predict delay risk.</p>
-
-      <div className="card">
-        <form onSubmit={predictRisk}>
-          
-          <label>Scheduled Days for Shipment</label>
-          <input type="number" name="scheduled_days" value={formData.scheduled_days} onChange={handleChange} min="0" max="30" />
-
-          <label>Shipping Mode</label>
-          <select name="shipping_mode" value={formData.shipping_mode} onChange={handleChange}>
-            <option value="Standard Class">Standard Class</option>
-            <option value="First Class">First Class</option>
-            <option value="Second Class">Second Class</option>
-            <option value="Same Day">Same Day</option>
-          </select>
-
-          <label>Order Month (1-12)</label>
-          <input type="number" name="order_month" value={formData.order_month} onChange={handleChange} min="1" max="12" />
-
-          <label>Transaction Type</label>
-          <select name="order_type" value={formData.order_type} onChange={handleChange}>
-            <option value="DEBIT">DEBIT</option>
-            <option value="TRANSFER">TRANSFER</option>
-            <option value="PAYMENT">PAYMENT</option>
-            <option value="CASH">CASH</option>
-          </select>
-
-          <button type="submit" disabled={loading}>
-            {loading ? "Analyzing Risk..." : "Predict Risk"}
-          </button>
-        </form>
+      <div className="header-section">
+        <h1>📦 LogiSense AI Core</h1>
+        <p>Advanced predictive analytics for global supply chain routing.</p>
       </div>
 
-      {/* 5. Display the Results */}
-      {result && (
-        <div className={`result-card ${result.is_late ? 'late' : 'on-time'}`}>
-          <h2>{result.is_late ? '⚠️ HIGH RISK OF DELAY' : '✅ ON TIME'}</h2>
-          <p>AI Confidence: <strong>{(result.probability * 100).toFixed(1)}% chance of lateness</strong></p>
-          
-          <h3>Top Delay Factors (SHAP Analysis):</h3>
-          
-          {/* NEW RECHARTS VISUALIZATION */}
-          <div style={{ height: '250px', width: '100%', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: '8px', padding: '15px 0', marginTop: '10px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart layout="vertical" data={result.top_reasons} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
-                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.8)' }} />
-                <YAxis dataKey="feature" type="category" width={140} tick={{ fill: 'rgba(255,255,255,0.9)', fontSize: 13 }} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#222', border: 'none', borderRadius: '8px', color: '#fff' }}
-                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                />
-                <Bar dataKey="impact" radius={[0, 4, 4, 0]}>
-                  {/* Red bars for delay factors (+), Green bars for speeding factors (-) */}
-                  {result.top_reasons.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.impact > 0 ? '#ff4d4f' : '#4ade80'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      <div className="dashboard-grid">
+        {/* LEFT COLUMN: SINGLE ORDER */}
+        <div className="card">
+          <h2>🔍 Single Order Inspection</h2>
+          <form onSubmit={predictRisk}>
+            <div className="input-group">
+              <label>Scheduled Lead Time (Days)</label>
+              <input type="number" name="scheduled_days" value={formData.scheduled_days} onChange={handleChange} min="0" max="30" />
+            </div>
+            
+            <div className="input-group">
+              <label>Shipping Protocol</label>
+              <select name="shipping_mode" value={formData.shipping_mode} onChange={handleChange}>
+                <option value="Standard Class">Standard Class</option>
+                <option value="First Class">First Class</option>
+                <option value="Second Class">Second Class</option>
+                <option value="Same Day">Same Day</option>
+              </select>
+            </div>
 
-          {/* NEW LLM INSIGHT SECTION */}
-          <div className="llm-insight">
-            <h3>🤖 Strategic LLM Insight</h3>
-            <p>{result.llm_insight}</p>
-          </div>
+            <div className="input-groups-row">
+              <div className="input-group">
+                <label>Operational Month (1-12)</label>
+                <input type="number" name="order_month" value={formData.order_month} onChange={handleChange} min="1" max="12" />
+              </div>
+              <div className="input-group">
+                <label>Transaction Type</label>
+                <select name="order_type" value={formData.order_type} onChange={handleChange}>
+                  <option value="DEBIT">DEBIT</option>
+                  <option value="TRANSFER">TRANSFER</option>
+                  <option value="PAYMENT">PAYMENT</option>
+                  <option value="CASH">CASH</option>
+                </select>
+              </div>
+            </div>
 
+            <button type="submit" disabled={loading} className="primary-btn">
+              {loading ? "Initializing AI Engine..." : "Run Risk Analysis"}
+            </button>
+          </form>
         </div>
-      )}
+
+        {/* RIGHT COLUMN: BATCH PROCESSING */}
+        <div className="card batch-card">
+          <h2>📊 System-Wide Batch Processing</h2>
+          <p>Upload routing logs (.csv) for multi-node delay forecasting.</p>
+          
+          <div className="upload-zone">
+            <input type="file" accept=".csv" onChange={handleFileUpload} disabled={batchLoading} />
+            {batchLoading && <p className="loading-text">Processing system data...</p>}
+          </div>
+
+          {batchResult && (
+            <div className="batch-stats">
+              <div className="stat-box">
+                <h3>{batchResult.total_processed}</h3>
+                <span>Orders Analyzed</span>
+              </div>
+              <div className="stat-box danger">
+                <h3>{batchResult.high_risk_count}</h3>
+                <span>High Risk Orders</span>
+              </div>
+              <div className="stat-box warning">
+                <h3>{batchResult.average_risk_percentage.toFixed(1)}%</h3>
+                <span>System Average Risk</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* KEEP YOUR EXISTING RESULTS SECTION HERE */}
+      {/* ... {result && ( ... )} ... */}
+
     </div>
   )
 }

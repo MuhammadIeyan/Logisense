@@ -7,3 +7,4 @@ joblib
 shap
 google-generativeai
 pydantic
+python-multipart

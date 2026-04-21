@@ -1,12 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
+import numpy as np
 import joblib
 import xgboost as xgb
 import shap
 import google.generativeai as genai
 import os
+import io
 
 # ==========================================
 # 1. SETUP GEMINI API (Paste your key here!)
@@ -96,4 +98,38 @@ def predict_risk(data: ShipmentData):
         "is_late": is_late,
         "top_reasons": top_3_reasons,
         "llm_insight": llm_insight  # We added the LLM text to the payload!
+    }
+
+@app.post("/predict_batch")
+async def predict_batch(file: UploadFile = File(...)):
+    # 1. Read the uploaded CSV file
+    contents = await file.read()
+    df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
+    
+    # 2. Prepare the data exactly like the training data
+    # (Assuming the CSV has columns: 'Days for shipment (scheduled)', 'Shipping Mode', 'Order_Month', 'Type')
+    batch_input = pd.DataFrame(0, index=np.arange(len(df)), columns=expected_features)
+    
+    batch_input['Days for shipment (scheduled)'] = df['Days for shipment (scheduled)']
+    batch_input['Order_Month'] = df['Order_Month']
+    
+    # Map categorical variables using one-hot encoding logic
+    for i, row in df.iterrows():
+        if f"Shipping Mode_{row['Shipping Mode']}" in batch_input.columns:
+            batch_input.at[i, f"Shipping Mode_{row['Shipping Mode']}"] = 1
+        if f"Type_{row['Type']}" in batch_input.columns:
+            batch_input.at[i, f"Type_{row['Type']}"] = 1
+
+    # 3. Run the massive batch prediction!
+    probabilities = model.predict_proba(batch_input)[:, 1]
+    
+    # 4. Calculate metrics
+    total_orders = len(df)
+    high_risk_orders = sum(prob > 0.40 for prob in probabilities)
+    average_risk = (sum(probabilities) / total_orders) * 100
+    
+    return {
+        "total_processed": total_orders,
+        "high_risk_count": int(high_risk_orders),
+        "average_risk_percentage": float(average_risk)
     }
