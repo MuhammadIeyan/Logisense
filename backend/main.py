@@ -65,11 +65,11 @@ async def predict(order: OrderData):
     if f"Market_{order.market}" in input_df.columns:
         input_df.at[0, f"Market_{order.market}"] = 1
 
-    # Run Prediction
+    # 1. BASELINE PREDICTION
     probability = model.predict_proba(input_df)[0][1]
     is_late = bool(probability > 0.40)
     
-    # Run SHAP
+    # 2. RUN SHAP (Game Theory Impacts)
     shap_values = explainer.shap_values(input_df)
     feature_impacts = []
     for i, feature_name in enumerate(expected_features):
@@ -79,17 +79,51 @@ async def predict(order: OrderData):
             
     feature_impacts = sorted(feature_impacts, key=lambda x: abs(x["impact"]), reverse=True)[:5]
     
-    # Generate LLM Insight
+    # 3. THE COUNTERFACTUAL SIMULATION ENGINE
+    simulation_text = "No simulation required (Baseline risk is within acceptable SLA parameters)."
+    
+    # If it's high risk, and we aren't already using the fastest mode, run a simulation
+    if is_late and order.shipping_mode not in ["First Class", "Same Day"]:
+        # Create a digital twin of the input data
+        simulated_df = input_df.copy()
+        
+        # Turn off the current shipping mode
+        if f"Shipping Mode_{order.shipping_mode}" in simulated_df.columns:
+            simulated_df.at[0, f"Shipping Mode_{order.shipping_mode}"] = 0
+            
+        # Turn on the upgraded shipping mode
+        if "Shipping Mode_First Class" in simulated_df.columns:
+            simulated_df.at[0, "Shipping Mode_First Class"] = 1
+            
+        # Run the simulation through XGBoost
+        simulated_prob = model.predict_proba(simulated_df)[0][1]
+        risk_reduction = (probability - simulated_prob) * 100
+        
+        # Evaluate the ROI of the simulation
+        if risk_reduction > 10.0:
+            simulation_text = f"SIMULATION SUCCESS: Upgrading to First Class reduces delay risk from {probability*100:.1f}% down to {simulated_prob*100:.1f}% (an absolute reduction of {risk_reduction:.1f}%)."
+        else:
+            simulation_text = f"SIMULATION FAILED: Upgrading to First Class only reduces risk by {risk_reduction:.1f}%. The risk reduction does not justify the premium freight cost. Look for regional routing alternatives."
+
+    # 4. GENERATE ROI-FOCUSED LLM INSIGHT
     llm_insight = "LLM Insight unavailable. Please check API Key."
     if GEMINI_API_KEY:
         try:
             llm_model = genai.GenerativeModel('gemini-2.5-flash')
             prompt = f"""
-            You are an expert supply chain analyst. 
-            A shipment to the {order.market} market ({order.order_region} region) has a {probability*100:.1f}% chance of being late. 
-            The top driving factors (SHAP values) are: {feature_impacts}.
-            Positive impacts cause delay, negative impacts speed it up. 
-            Give a 2-sentence strategic recommendation to the logistics manager on how to mitigate this specific geographic/operational risk.
+            You are a senior supply chain strategist advising a logistics manager.
+            Target Market: {order.market} ({order.order_region})
+            Baseline Delay Risk: {probability*100:.1f}%
+            
+            Systemic delay drivers (SHAP): {feature_impacts}
+            
+            Simulation Engine Output:
+            {simulation_text}
+            
+            CRITICAL CONSTRAINTS:
+            1. Analyze the Simulation Engine Output. If the simulation succeeded, write a 2-sentence business justification to approve the premium upgrade cost.
+            2. If the simulation failed (or wasn't run), recommend a specific, non-obvious operational intervention based strictly on the SHAP drivers.
+            3. DO NOT give generic advice (e.g., "monitor the situation" or "optimize timelines"). Focus on ROI, system optimization, and protecting the SLA.
             """
             response = llm_model.generate_content(prompt)
             llm_insight = response.text
