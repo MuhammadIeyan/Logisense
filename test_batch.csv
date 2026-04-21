@@ -1,0 +1,5 @@
+Days for shipment (scheduled),Shipping Mode,Order_Month,Type
+2,Standard Class,6,DEBIT
+4,Standard Class,11,TRANSFER
+1,First Class,1,PAYMENT
+6,Second Class,12,TRANSFER
