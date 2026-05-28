@@ -1,25 +1,312 @@
-body { font-family: 'Inter', system-ui, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 40px 20px; }
-.container { max-width: 1000px; margin: 0 auto; }
-.header-section { text-align: center; margin-bottom: 40px; }
-.header-section h1 { background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; color: transparent; margin-bottom: 5px; }
-.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.card { background: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
-h2 { font-size: 1.2rem; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 20px; }
-.input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
-.input-groups-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-input, select { background: #0f172a; color: white; padding: 12px; border-radius: 6px; border: 1px solid #334155; }
-.primary-btn { width: 100%; background: #2563eb; color: white; padding: 14px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: all 0.2s; margin-top: 10px; }
-.primary-btn:hover:not(:disabled) { background: #1d4ed8; transform: translateY(-1px); }
-.primary-btn:disabled { background: #475569; cursor: not-allowed; }
+/* --- 1. SUPABASE-INSPIRED DARK THEME --- */
+:root {
+  /* Core Backgrounds */
+  --bg-base: #121212;        /* Deepest black background */
+  --bg-surface: #1c1c1c;     /* Floating card background */
+  --bg-input: #2a2a2a;       /* Input field background */
+  
+  /* Borders */
+  --border-subtle: #2e2e2e;  /* Crisp, dark gray borders */
+  --border-focus: #555555;
+  
+  /* Typography */
+  --text-main: #ededed;      /* Bright off-white for high readability */
+  --text-muted: #8b8b8b;     /* Professional gray for labels */
+  
+  /* Brand Accents */
+  --brand-primary: #3ecf8e;  /* Supabase Neon Green */
+  --brand-hover: #24b47e;
+  --text-on-brand: #000000;  /* Black text on green buttons */
+  
+  /* Alerts & Status */
+  --status-critical: #ef4444; /* Alert Red */
+  --status-safe: #3ecf8e;
+  
+  /* Geometry */
+  --radius-card: 8px;
+  --radius-input: 6px;
+  --transition: 0.2s ease;
+}
 
-/* Batch Processing Styles */
-.upload-zone { border: 2px dashed #334155; padding: 30px; text-align: center; border-radius: 8px; margin-bottom: 20px; background: rgba(0,0,0,0.2); }
-.batch-stats { display: flex; gap: 10px; justify-content: space-between; }
-.stat-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; flex: 1; text-align: center; }
-.stat-box h3 { margin: 0; font-size: 1.8rem; }
-.stat-box span { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-box.danger h3 { color: #ef4444; }
-.stat-box.warning h3 { color: #f59e0b; }
+/* --- 2. GLOBAL RESET --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-/* Make it responsive for mobile */
-@media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+body {
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* --- 3. CORE LAYOUT --- */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.auth-container .card {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* The Top Navigation Bar */
+.header-section {
+  background-color: var(--bg-surface);
+  padding: 20px 30px;
+  border-radius: var(--radius-card);
+  margin-bottom: 30px;
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-section h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.header-section p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Tab Buttons in Header */
+.header-section button {
+  font-weight: 500;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-muted) !important;
+  transition: var(--transition);
+  background-color: transparent !important;
+}
+
+.header-section button:hover {
+  border-color: var(--border-focus) !important;
+  color: var(--text-main) !important;
+}
+
+/* Active Tab Override */
+.header-section button[style*="background: #38bdf8"],
+.header-section button[style*="background: rgb(56, 189, 248)"] {
+  background-color: var(--bg-input) !important;
+  border-color: var(--brand-primary) !important;
+  color: var(--text-main) !important;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* --- 4. ENTERPRISE CARDS --- */
+.card {
+  background-color: var(--bg-surface);
+  padding: 32px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-subtle);
+  /* Removed drop shadows for a flatter, modern look */
+}
+
+.card h2 {
+  font-size: 1.15rem;
+  font-weight: 500;
+  margin-bottom: 24px;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+
+/* --- 5. CLEAN FORMS & INPUTS --- */
+.input-groups-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-bottom: 16px;
+}
+
+.input-group label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  border-radius: var(--radius-input);
+  font-size: 0.95rem;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+}
+
+/* --- 6. ACTION BUTTONS --- */
+button {
+  font-family: inherit;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--brand-primary);
+  color: var(--text-on-brand);
+  border: none;
+  border-radius: var(--radius-input);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: var(--transition);
+}
+
+.primary-btn:hover:not(:disabled) {
+  background-color: var(--brand-hover);
+}
+
+.primary-btn:disabled {
+  background-color: var(--bg-input);
+  color: var(--border-focus);
+  cursor: not-allowed;
+  border: 1px solid var(--border-subtle);
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-top: 16px;
+  width: 100%;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.text-btn:hover {
+  color: var(--text-main);
+}
+
+/* --- 7. AI RESULTS PANEL --- */
+.result-card {
+  background-color: var(--bg-surface);
+  padding: 32px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-subtle);
+}
+
+.result-card h2 {
+  font-size: 1.4rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.result-card p {
+  font-size: 1rem;
+  margin: 12px 0 24px 0;
+  color: var(--text-muted);
+}
+
+/* Status Indicators */
+.result-card.late {
+  border-top: 4px solid var(--status-critical);
+}
+
+.result-card.on-time {
+  border-top: 4px solid var(--status-safe);
+}
+
+/* Analytics Chart Adjustments */
+.recharts-cartesian-grid-horizontal line, 
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--border-subtle);
+}
+
+.recharts-text {
+  fill: var(--text-muted) !important;
+}
+
+/* LLM Strategic Insight Box */
+.llm-insight {
+  margin-top: 24px;
+  padding: 20px;
+  background-color: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--brand-primary);
+  border-radius: var(--radius-input);
+}
+
+.llm-insight h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.llm-insight p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+/* --- 8. DASHBOARD KPIs --- */
+.dashboard-view h2 {
+  margin-top: 0;
+  color: var(--text-main);
+}
+
+.dashboard-view .card h3 {
+  color: var(--text-main) !important;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- 9. LOADING SPINNER --- */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--border-subtle);
+  border-top: 4px solid var(--brand-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

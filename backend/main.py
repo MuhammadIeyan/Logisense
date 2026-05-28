@@ -30,10 +30,13 @@ if GEMINI_API_KEY:
 
 # 1. LOAD THE NEW ADVANCED MODELS
 print("Loading Advanced ML Models...")
-model = joblib.load('logisense_advanced_xgb.joblib')
-explainer = joblib.load('logisense_advanced_shap.joblib')
-expected_features = joblib.load('advanced_expected_features.joblib')
-print("Advanced Models loaded successfully!")
+try:
+    model = joblib.load('logisense_advanced_xgb.joblib')
+    explainer = joblib.load('logisense_advanced_shap.joblib')
+    expected_features = joblib.load('advanced_expected_features.joblib')
+    print("Advanced Models loaded successfully!")
+except Exception as e:
+    print(f"Warning: Could not load ML artifacts. Error: {e}")
 
 # 2. UPGRADE THE DATA SCHEMA TO INCLUDE GEOGRAPHY
 class OrderData(BaseModel):
@@ -105,13 +108,13 @@ async def predict(order: OrderData):
         else:
             simulation_text = f"SIMULATION FAILED: Upgrading to First Class only reduces risk by {risk_reduction:.1f}%. The risk reduction does not justify the premium freight cost. Look for regional routing alternatives."
 
-    # 4. GENERATE ROI-FOCUSED LLM INSIGHT
+    # 4. GENERATE ROI-FOCUSED LLM INSIGHT (UPDATED PROMPT)
     llm_insight = "LLM Insight unavailable. Please check API Key."
     if GEMINI_API_KEY:
         try:
             llm_model = genai.GenerativeModel('gemini-2.5-flash')
             prompt = f"""
-            You are a senior supply chain strategist advising a logistics manager.
+            You are a ruthless, highly experienced Supply Chain Director analyzing a single shipment.
             Target Market: {order.market} ({order.order_region})
             Baseline Delay Risk: {probability*100:.1f}%
             
@@ -121,9 +124,11 @@ async def predict(order: OrderData):
             {simulation_text}
             
             CRITICAL CONSTRAINTS:
-            1. Analyze the Simulation Engine Output. If the simulation succeeded, write a 2-sentence business justification to approve the premium upgrade cost.
-            2. If the simulation failed (or wasn't run), recommend a specific, non-obvious operational intervention based strictly on the SHAP drivers.
-            3. DO NOT give generic advice (e.g., "monitor the situation" or "optimize timelines"). Focus on ROI, system optimization, and protecting the SLA.
+            1. FORMAT: Exactly ONE bold actionable headline, followed by exactly TWO short bullet points.
+            2. Analyze the Simulation Engine Output. If the simulation succeeded, write a 2-sentence business justification to approve the premium freight cost.
+            3. If the simulation failed (or wasn't run), recommend a specific, real-world physical logistics intervention (e.g., cross-docking, bypass regional hubs, audit carrier SLA) based strictly on the SHAP drivers.
+            4. TONE: Executive, decisive, and financial. No generic fluff.
+            5. MAX LENGTH: 35 words total.
             """
             response = llm_model.generate_content(prompt)
             llm_insight = response.text
