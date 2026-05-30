@@ -14,8 +14,14 @@ function App() {
   const [activeTab, setActiveTab] = useState('predict')
 
   const [formData, setFormData] = useState({
-    scheduled_days: 2, shipping_mode: 'Standard Class', order_month: 6,
-    order_day_of_week: 1, order_type: 'DEBIT', order_region: 'Western Europe', market: 'Europe'
+    scheduled_days: 2, 
+    shipping_mode: 'Standard Class', 
+    order_date: new Date().toISOString().split('T')[0], // Defaults to today
+    order_month: new Date().getMonth() + 1,
+    order_day_of_week: (new Date().getDay() + 6) % 7, // Maps Mon=0, Sun=6
+    order_type: 'DEBIT', 
+    order_region: 'Western Europe', 
+    market: 'Europe'
   })
   const [wizardStep, setWizardStep] = useState(1);
   const [result, setResult] = useState(null)
@@ -56,6 +62,26 @@ function App() {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value })
 
+  // --- NEW: Calendar Interceptor ---
+  const handleDateChange = (e) => {
+    const selectedDate = e.target.value;
+    if (!selectedDate) return;
+
+    // Split to avoid timezone shifting issues
+    const [year, month, day] = selectedDate.split('-');
+    const dateObj = new Date(year, month - 1, day);
+
+    const computedMonth = dateObj.getMonth() + 1; // 1-12
+    const computedDayOfWeek = (dateObj.getDay() + 6) % 7; // Shift standard JS (Sun=0) to Model (Mon=0, Sun=6)
+
+    setFormData({
+      ...formData,
+      order_date: selectedDate,
+      order_month: computedMonth,
+      order_day_of_week: computedDayOfWeek
+    });
+  }
+
   const predictRisk = async (e) => {
     e.preventDefault()
     setWizardStep(4) 
@@ -81,7 +107,6 @@ function App() {
         })
       })
       
-      // THIS WAS MISSING:
       const data = await response.json()
       setResult(data)
     } catch (error) {
@@ -302,7 +327,7 @@ function App() {
               </div>
             )}
 
-            {/* STEP 3: OPERATIONAL DETAILS */}
+            {/* STEP 3: OPERATIONAL DETAILS (CALENDAR UPDATE) */}
             {wizardStep === 3 && (
               <div className="step-content" style={{ flex: 1, animation: 'slideIn 0.3s ease-out' }}>
                 <h2>⚙️ Operational Parameters</h2>
@@ -325,15 +350,16 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="input-groups-row">
-                    <div className="input-group">
-                      <label>Month (1-12)</label>
-                      <input type="number" name="order_month" value={formData.order_month} onChange={handleChange} min="1" max="12" />
-                    </div>
-                    <div className="input-group">
-                      <label>Day of Week (0=Mon, 6=Sun)</label>
-                      <input type="number" name="order_day_of_week" value={formData.order_day_of_week} onChange={handleChange} min="0" max="6" />
-                    </div>
+                  {/* REPLACED MONTH/DAY INPUTS WITH DATE PICKER */}
+                  <div className="input-group" style={{ marginBottom: '20px' }}>
+                    <label>Order Date</label>
+                    <input 
+                      type="date" 
+                      name="order_date" 
+                      value={formData.order_date} 
+                      onChange={handleDateChange} 
+                      required
+                    />
                   </div>
 
                   <div className="input-group">
